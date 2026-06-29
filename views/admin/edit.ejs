@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Редактировать — <%= item.title %></title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-body">
+    <header class="admin-header">
+        <h1>Редактирование</h1>
+        <a href="/admin" class="btn">Назад</a>
+    </header>
+
+    <main class="admin-main">
+        <form method="POST" action="/admin/save/<%= item.id %>" class="edit-form">
+            <div class="form-group">
+                <label>Название</label>
+                <input type="text" name="title" value="<%= item.title %>" required>
+            </div>
+            <div class="form-group">
+                <label>Оригинальное название</label>
+                <input type="text" name="original_title" value="<%= item.original_title||'' %>">
+            </div>
+                        <div class="form-row">
+                <div class="form-group">
+                    <label>Возрастной рейтинг (Rated)</label>
+                    <input type="text" name="rated" value="<%= item.rated||'' %>" placeholder="PG-13">
+                </div>
+                <div class="form-group">
+                    <label>Дата выхода (Released)</label>
+                    <input type="text" name="released" value="<%= item.released||'' %>" placeholder="16 Jul 2010">
+                </div>
+                <div class="form-group">
+                    <label>Длительность (Runtime)</label>
+                    <input type="text" name="runtime" value="<%= item.runtime||'' %>" placeholder="148 min">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Жанры (Genre)</label>
+                <input type="text" name="genre" value="<%= item.genre||'' %>" placeholder="Action, Adventure, Sci-Fi">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Режиссёр (Director)</label>
+                    <input type="text" name="director" value="<%= item.director||'' %>" placeholder="Christopher Nolan">
+                </div>
+                <div class="form-group">
+                    <label>Сценарист (Writer)</label>
+                    <input type="text" name="writer" value="<%= item.writer||'' %>" placeholder="Christopher Nolan">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Актёры (Actors)</label>
+                <input type="text" name="actors" value="<%= item.actors||'' %>" placeholder="Leonardo DiCaprio, Joseph Gordon-Levitt, Ellen Page">
+            </div>
+            <div class="form-group">
+                <label>Страна (Country)</label>
+                <input type="text" name="country" value="<%= item.country||'' %>" placeholder="USA, UK">
+            </div>
+            <div class="form-group">
+                <label>IMDb ID</label>
+                <input type="text" name="imdb_id" value="<%= item.imdb_id||'' %>" placeholder="tt1375666">
+                <small style="color:#888; display:block; margin-top:4px;">
+                    Заполни IMDb ID, оставь «Постер» и «IMDb рейтинг» пустыми — подтянутся автоматически с OMDb.
+                </small>
+            </div>
+            <div class="form-group">
+                <label>Год</label>
+                <input type="number" name="year" value="<%= item.year||'' %>">
+            </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea name="description" rows="4"><%= item.description||'' %></textarea>
+            </div>
+            <div class="form-group">
+                <label>Постер (URL) — оставь пустым для автозагрузки с IMDb</label>
+
+                        <div>
+                            <img src="<%= item.poster_url || 'https://via.placeholder.com/300x450/111/fff?text=' + encodeURIComponent(item.title) %>" alt="<%= item.title %>" loading="lazy" style="height: 300px;">
+                            <% if(item.imdb_rating){ %><div class="rating-badge imdb">IMDb <%= item.imdb_rating %></div><% } %>
+                        </div>
+
+                <input type="text" name="poster_url" value="<%= item.poster_url||'' %>">
+            </div>
+            <div class="form-group">
+                <label>Категория</label>
+                <select name="category_id">
+                    <% categories.forEach(cat => { %>
+                    <option value="<%= cat.id %>" <%= item.category_id==cat.id?'selected':'' %>><%= cat.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>IMDb</label>
+                    <input type="number" step="0.1" name="imdb_rating" value="<%= item.imdb_rating||'' %>">
+                </div>
+                <div class="form-group">
+                    <label>КиноПоиск</label>
+                    <input type="number" step="0.1" name="kinopoisk_rating" value="<%= item.kinopoisk_rating||'' %>">
+                </div>
+                <div class="form-group">
+                    <label>Rotten Tomatoes (%)</label>
+                    <input type="number" name="rotten_tomatoes_rating" value="<%= item.rotten_tomatoes_rating||'' %>">
+                </div>
+            </div>
+
+            <div class="form-group" style="border:1px solid #333; padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+                <label style="color:#fff; margin-bottom:0.8rem; display:block; font-weight:600;">Плеер</label>
+
+                <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
+                    <label style="cursor:pointer; color:#ccc;">
+                        <input type="radio" name="player_type" value="single" <%= !item.is_playlist?'checked':'' %>> Один файл
+                    </label>
+                    <label style="cursor:pointer; color:#ccc;">
+                        <input type="radio" name="player_type" value="playlist" <%= item.is_playlist?'checked':'' %>> Плейлист (сериал)
+                    </label>
+                </div>
+
+                <div id="single-input" style="display:<%= !item.is_playlist?'block':'none' %>;">
+                    <input type="text" name="player_url_single" value="<%= !item.is_playlist?(item.player_url||''):'' %>" placeholder="https://.../video.mp4">
+                </div>
+
+                <div id="playlist-input" style="display:<%= item.is_playlist?'block':'none' %>;">
+                    <textarea name="playlist_lines" rows="12" placeholder="Серия 1 | https://.../1.mp4
+Серия 2 | https://.../2.mp4
+Серия 3 | https://.../3.mp4"><%= item.playlist_preview||'' %></textarea>
+                    <small style="color:#888; display:block; margin-top:4px;">
+                        Каждая строка — одна серия. Формат: <b>Название | URL</b> или просто <b>URL</b> (название сгенерируется автоматически)
+                    </small>
+                </div>
+            </div>
+
+            <div class="active">
+                <label>Активен <input type="checkbox" name="is_active" <%= item.is_active?'checked':'' %>></label>
+            </div>
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+        </form>
+    </main>
+
+    <script>
+        (function() {
+            var radios = document.querySelectorAll('input[name="player_type"]');
+            var single = document.getElementById('single-input');
+            var playlist = document.getElementById('playlist-input');
+
+            function update() {
+                var isPlaylist = document.querySelector('input[name="player_type"][value="playlist"]').checked;
+                single.style.display = isPlaylist ? 'none' : 'block';
+                playlist.style.display = isPlaylist ? 'block' : 'none';
+            }
+
+            radios.forEach(function(r) { r.addEventListener('change', update); });
+        })();
+    </script>
+</body>
+</html>

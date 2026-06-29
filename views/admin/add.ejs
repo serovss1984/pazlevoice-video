@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Добавить контент — Pazl Voice</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-body">
+    <header class="admin-header">
+        <h1>Добавить контент</h1>
+        <a href="/admin" class="btn">Назад</a>
+    </header>
+
+    <main class="admin-main">
+        <% if(error){ %><div class="error" style="max-width:800px; margin-bottom:1rem;"><%= error %></div><% } %>
+        <form method="POST" action="/admin/add" class="edit-form">
+            <div class="form-group">
+                <label>Название *</label>
+                <input type="text" name="title" placeholder="Например: Начало" required>
+            </div>
+            <div class="form-group">
+                <label>Оригинальное название</label>
+                <input type="text" name="original_title" placeholder="Inception">
+            </div>
+            <div class="form-group">
+                <label>IMDb ID</label>
+                <input type="text" name="imdb_id" placeholder="tt1375666">
+                <small style="color:#888; display:block; margin-top:4px;">
+                    Заполни IMDb ID, оставь «Постер», «Год», «Описание» и «IMDb рейтинг» пустыми — подтянутся автоматически с OMDb.
+                </small>
+            </div>
+            <div class="form-group">
+                <label>Описание</label>
+                <textarea name="description" rows="4" placeholder="Краткое описание сюжета..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Категория *</label>
+                <select name="category_id" required>
+                    <option value="">— Выбери категорию —</option>
+                    <% categories.forEach(cat => { %>
+                    <option value="<%= cat.id %>"><%= cat.name %></option>
+                    <% }) %>
+                </select>
+            </div>
+            <div class="form-group" style="border:1px solid #333; padding:1rem; border-radius:8px; margin-bottom:1.5rem;">
+                <label style="color:#fff; margin-bottom:0.8rem; display:block; font-weight:600;">Плеер</label>
+
+                <div style="display:flex; gap:1.5rem; margin-bottom:1rem;">
+                    <label style="cursor:pointer; color:#ccc;">
+                        <input type="radio" name="player_type" value="single" checked> Один файл
+                    </label>
+                    <label style="cursor:pointer; color:#ccc;">
+                        <input type="radio" name="player_type" value="playlist"> Плейлист (сериал)
+                    </label>
+                </div>
+
+                <div id="single-input" style="display:block;">
+                    <input type="text" name="player_url_single" placeholder="https://.../video.mp4">
+                </div>
+
+                <div id="playlist-input" style="display:none;">
+                    <textarea name="playlist_lines" rows="12" placeholder="Серия 1 | https://.../1.mp4
+Серия 2 | https://.../2.mp4
+Серия 3 | https://.../3.mp4"></textarea>
+                    <small style="color:#888; display:block; margin-top:4px;">
+                        Каждая строка — одна серия. Формат: <b>Название | URL</b> или просто <b>URL</b> (название сгенерируется автоматически)
+                    </small>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Возрастной рейтинг (Rated)</label>
+                    <input type="text" name="rated" placeholder="PG-13">
+                </div>
+                <div class="form-group">
+                    <label>Дата выхода (Released)</label>
+                    <input type="text" name="released" placeholder="16 Jul 2010">
+                </div>
+                <div class="form-group">
+                    <label>Длительность (Runtime)</label>
+                    <input type="text" name="runtime" placeholder="148 min">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Жанры (Genre)</label>
+                <input type="text" name="genre" placeholder="Action, Adventure, Sci-Fi">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Режиссёр (Director)</label>
+                    <input type="text" name="director" placeholder="Christopher Nolan">
+                </div>
+                <div class="form-group">
+                    <label>Сценарист (Writer)</label>
+                    <input type="text" name="writer" placeholder="Christopher Nolan">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Актёры (Actors)</label>
+                <input type="text" name="actors" placeholder="Leonardo DiCaprio, Joseph Gordon-Levitt, Ellen Page">
+            </div>
+            <div class="form-group">
+                <label>Страна (Country)</label>
+                <input type="text" name="country" placeholder="USA, UK">
+            </div>
+            <div class="form-group">
+                <label>URL-идентификатор (slug)</label>
+                <input type="text" name="slug" placeholder="natchalo — если пусто, сгенерируется из названия">
+            </div>
+            <div class="form-group">
+                <label>Год</label>
+                <input type="number" name="year" placeholder="2010">
+            </div>
+            <div class="form-group">
+                <label>Постер (URL) — оставь пустым для автозагрузки с IMDb</label>
+                <input type="text" name="poster_url" placeholder="https://...">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>IMDb</label>
+                    <input type="number" step="0.1" name="imdb_rating" placeholder="8.8">
+                </div>
+                <div class="form-group">
+                    <label>КиноПоиск</label>
+                    <input type="number" step="0.1" name="kinopoisk_rating" placeholder="8.5">
+                </div>
+                <div class="form-group">
+                    <label>Rotten Tomatoes (%)</label>
+                    <input type="number" name="rotten_tomatoes_rating" placeholder="87">
+                </div>
+            </div>
+            <div class="active">
+                <label><input type="checkbox" name="is_active" checked> Активен</label>
+            </div>
+            <button type="submit" class="btn btn-primary">Добавить контент</button>
+        </form>
+    </main>
+
+    <script>
+        (function() {
+            var radios = document.querySelectorAll('input[name="player_type"]');
+            var single = document.getElementById('single-input');
+            var playlist = document.getElementById('playlist-input');
+
+            function update() {
+                var isPlaylist = document.querySelector('input[name="player_type"][value="playlist"]').checked;
+                single.style.display = isPlaylist ? 'none' : 'block';
+                playlist.style.display = isPlaylist ? 'block' : 'none';
+            }
+
+            radios.forEach(function(r) { r.addEventListener('change', update); });
+        })();
+    </script>
+</body>
+</html>

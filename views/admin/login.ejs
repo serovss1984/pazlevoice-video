@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Админ-панель — Pazl Voice</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="admin-login">
+    <div class="login-box">
+        <h1>Pazl Voice Admin</h1>
+        <% if(error){ %><div class="error"><%= error %></div><% } %>
+        <form method="POST" action="/admin/login">
+            <input type="text" name="username" placeholder="Логин" required>
+            <input type="password" name="password" placeholder="Пароль" required>
+            <button type="submit">Войти</button>
+        </form>
+    </div>
+</body>
+</html>
