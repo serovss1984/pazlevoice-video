@@ -181,43 +181,99 @@ function getPlaylistPreview(raw) {
 // === ROUTES ===
 app.get('/', async (req, res) => {
     try {
-        const cats = await pool.query('SELECT * FROM categories ORDER BY sort_order');
-        const items = await pool.query(`
-            SELECT c.*, cat.slug as cat_slug 
-            FROM content c 
-            JOIN categories cat ON c.category_id = cat.id 
-            WHERE c.is_active = true 
-            ORDER BY c.created_at DESC
+        // 1. Пагинация: определяем текущую страницу
+        const limit = 12; // Количество элементов на страницу
+        const page = parseInt(req.query.page) || 1; // Если ?page= нет, то первая
+        const offset = (page - 1) * limit;
+
+        // 2. Получаем общее количество записей для расчета страниц
+        const countResult = await pool.query('SELECT COUNT(*) FROM content WHERE is_active = true');
+        const totalItems = parseInt(countResult.rows[0].count);
+        const totalPages = Math.ceil(totalItems / limit);
+
+        // 3. Получаем категории для хедера
+        const categoriesResult = await pool.query(`
+            SELECT name, slug FROM categories ORDER BY id ASC
         `);
-        for (const item of items.rows) {
-            await enrichContent(item);
-        }
         const grouped = {};
-        cats.rows.forEach(c => {
-            grouped[c.slug] = { ...c, items: items.rows.filter(i => i.category_id === c.id) };
+        categoriesResult.rows.forEach(cat => {
+            grouped[cat.slug] = { name: cat.name, slug: cat.slug };
         });
-        res.render('index', { grouped });
+
+        // 4. Основной контент: 10 добавленных с учетом OFFSET (пагинации)
+        const itemsResult = await pool.query(`
+            SELECT c.*, cat.name as category_name, cat.slug as category_slug
+            FROM content c
+            JOIN categories cat ON c.category_id = cat.id
+            ORDER BY c.id DESC
+            LIMIT $1 OFFSET $2
+        `, [limit, offset]);
+
+        const latestItems = [];
+        for (const row of itemsResult.rows) {
+            latestItems.push(await enrichContent(row));
+        }
+
+        // 5. Сайдбар: Сериалы, сортированные по UPDATED_AT
+        const sidebarResult = await pool.query(`
+            SELECT c.title, c.slug, c.updated_at, c.updated_to
+            FROM content c
+            JOIN categories cat ON c.category_id = cat.id
+            WHERE cat.slug = 'serialy' 
+            ORDER BY c.updated_at DESC
+            LIMIT 15
+        `);
+
+        // Передаем все данные в шаблон, включая переменные пагинации
+        res.render('index', { 
+            grouped, 
+            items: latestItems,
+            sidebarSerials: sidebarResult.rows,
+            currentPage: page,
+            totalPages: totalPages
+        });
+
     } catch (e) {
         console.error('[ERROR] Index:', e.message);
-        res.status(500).send('DB error');
+        res.status(500).send('Server error');
     }
 });
 
 app.get('/watch/:slug', async (req, res) => {
     try {
+        // 1. Получаем сам контент
         const r = await pool.query(`
             SELECT c.*, cat.name as category_name 
             FROM content c 
             JOIN categories cat ON c.category_id = cat.id 
             WHERE c.slug = $1
         `, [req.params.slug]);
+        
         if (!r.rows.length) return res.status(404).send('Not found');
+        
         const item = await enrichContent(r.rows[0]);
         item.is_playlist = isPlaylist(item.player_url);
         if (item.is_playlist) {
             try { item.playlist = JSON.parse(item.player_url); } catch (e) { item.playlist = []; }
         }
-        res.render('watch', { item });
+
+        // 2. Получаем список категорий для динамического меню в хедере
+        const categoriesResult = await pool.query(`
+            SELECT name, slug FROM categories ORDER BY id ASC
+        `);
+
+        // Превращаем в объект, похожий на ваш grouped (чтобы разметка в partials/header не ломалась)
+        const grouped = {};
+        categoriesResult.rows.forEach(cat => {
+            grouped[cat.slug] = {
+                name: cat.name,
+                slug: cat.slug
+            };
+        });
+
+        // 3. Передаем и фильм, и категории для хедера
+        res.render('watch', { item, grouped });
+
     } catch (e) {
         console.error('[ERROR] Watch:', e.message);
         res.status(500).send('Server error');
@@ -360,20 +416,45 @@ app.post('/admin/save/:id', requireAuth, async (req, res) => {
             }
         }
 
-        // Собираем player_url
+        // 1. Собираем player_url и вытаскиваем имя последнего обновления
         let playerUrl = null;
+        let updatedTo = null; // По умолчанию null (например, для фильмов)
+
         if (b.player_type === 'playlist') {
             playerUrl = parsePlaylist(b.playlist_lines);
+            
+            // Логика вытаскивания "Сезон 1 - Серия 8"
+            if (b.playlist_lines && b.playlist_lines.trim()) {
+                // Разбиваем текст на массив строк, убираем пустые
+                const lines = b.playlist_lines.split('\n').map(l => l.trim()).filter(Boolean);
+                if (lines.length > 0) {
+                    // Берем самую последнюю строку из списка
+                    const lastLine = lines[lines.length - 1];
+                    
+                    // Если в строке есть разделитель |, забираем левую часть
+                    if (lastLine.includes('|')) {
+                        updatedTo = lastLine.split('|')[0].trim();
+                    } else {
+                        // Если разделителя нет и вставили только ссылку, 
+                        // запишем дефолтное значение или оставим null
+                        updatedTo = `Серия ${lines.length}`;
+                    }
+                }
+            }
         } else {
             playerUrl = b.player_url_single?.trim() || null;
+            // Если это фильм (single), можно написать что-то дефолтное или оставить пустым
+            updatedTo = 'Фильм'; 
         }
 
+        // 2. Выполняем SQL-запрос (добавили updated_at и updated_to)
         await pool.query(`
             UPDATE content SET 
                 title=$1, original_title=$2, year=$3, description=$4, poster_url=$5, imdb_id=$6,
                 rated=$7, released=$8, runtime=$9, genre=$10, director=$11, writer=$12, actors=$13, country=$14,
                 category_id=$15, imdb_rating=$16, kinopoisk_rating=$17, rotten_tomatoes_rating=$18,
-                player_url=$19, external_url=$20, is_active=$21
+                player_url=$19, external_url=$20, is_active=$21,
+                updated_at=CURRENT_TIMESTAMP, updated_to=$23
             WHERE id=$22
         `, [
             b.title, b.original_title || null, b.year ? parseInt(b.year) : null,
@@ -384,9 +465,12 @@ app.post('/admin/save/:id', requireAuth, async (req, res) => {
             b.kinopoisk_rating ? parseFloat(b.kinopoisk_rating) : null,
             b.rotten_tomatoes_rating ? parseInt(b.rotten_tomatoes_rating) : null,
             playerUrl, b.external_url || null,
-            b.is_active === 'on', parseInt(req.params.id)
+            b.is_active === 'on', parseInt(req.params.id),
+            updatedTo // Передаем как 23-й параметр
         ]);
-        res.redirect('/admin/edit/:id');
+
+        // Исправляем редирект (чтобы перенаправляло на ID фильма, а не на строку ':id')
+        res.redirect(`/admin/edit/${req.params.id}`);
     } catch (e) {
         console.error('[ERROR] Save:', e.message);
         res.status(500).send('Save error');

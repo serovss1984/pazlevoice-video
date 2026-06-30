@@ -1,0 +1,18 @@
+<header>
+    <div class="logo">
+        <a href="/">
+            <img src="/images/pazl-logo.png" alt="Pazl Voice" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline'">
+            <span class="logo-text" style="display:none">Pazl Voice</span>
+        </a>
+    </div>
+    
+    <nav class="header-nav">
+        <% if (typeof grouped !== 'undefined' && Object.keys(grouped).length > 0) { %>
+            <ul class="categories-menu">
+                <% Object.values(grouped).forEach(cat => { %>
+                    <li><a href="/#cat-<%= cat.slug %>"><%= cat.name %></a></li>
+                <% }) %>
+            </ul>
+        <% } %>
+    </nav>
+</header>

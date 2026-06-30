@@ -8,11 +8,7 @@
     <script src="/js/playerjs.js"></script>
 </head>
 <body>
-    <header>
-        <a href="/" class="back-btn">← Назад</a>
-        <div class="logo-small">Pazl Voice</div>
-    </header>
-
+    <%- include('partials/header') %>
     <main class="watch-page">
         <div class="content-info">
             <h1><%= item.title %></h1>
@@ -45,19 +41,15 @@
                 </div>
             </div>
             <% } %>
-
             <div class="meta-details">
                 <%= item.description %>
             </div>
-
         </div>
-
         <div class="player-container">
             <div id="player"></div>
         </div>
-
     </main>
-
+    <%- include('partials/footer') %>
     <script>
         <% if (item.is_playlist) { %>
         var player = new Playerjs({
